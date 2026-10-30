@@ -1,0 +1,49 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { lib: pygame, python: "3.11" }
+          - { lib: pygame, python: "3.12" }
+          - { lib: pygame, python: "3.13" }
+          - { lib: pygame-ce, python: "3.11" }
+          - { lib: pygame-ce, python: "3.12" }
+          - { lib: pygame-ce, python: "3.13" }
+          - { lib: pygame-ce, python: "3.14" }
+          - { lib: pygame-ce, python: "3.15" }
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: "python -m pip install --require-hashes --no-deps --only-binary=:all: -r requirements/${{ matrix.lib }}.txt"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -p no:cacheprovider
+
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build -t accept-mouse-click-test .
+      - run: docker run --rm accept-mouse-click-test

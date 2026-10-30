@@ -1,0 +1,7 @@
+*
+!pyproject.toml
+!README.md
+!accept_mouse_click.py
+!requirements/
+!tests/
+tests/**/__pycache__
