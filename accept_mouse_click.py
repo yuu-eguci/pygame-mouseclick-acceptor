@@ -1,10 +1,8 @@
 #!/usr/bin/env python
-# coding: utf-8
 
-'''accept_mouse_click
+"""accept_mouse_click
 
-pygame作品がwindowsでしかキーボード入力を正しく受け取ってくれない。
-そんなpygameをmacでも辛くも動かすため
+pygame作品でキーボード入力がうまく受け取れない環境でも辛くも動かすため
 マウスクリックをキー入力に化けさせる応急処置モジュール。
 
 使用例: 左クリックをZキー、スクロールボタンをAキーに変換したい場合。
@@ -16,30 +14,44 @@ pygame作品がwindowsでしかキーボード入力を正しく受け取って�
             left_click=K_z,
             scroll_click=K_a
             )
+"""
 
-使用条件:
-    eventのダミーを返しているので、
-    typeとkey以外のパラメータを使うスクリプトには対応してません。
-'''
-
+import pygame
 import pygame.locals as pgl
 
+_KEY_TYPES = {
+    pgl.MOUSEBUTTONDOWN: pgl.KEYDOWN,
+    pgl.MOUSEBUTTONUP: pgl.KEYUP,
+}
 
-def switch(event,
-           left_click  =pgl.K_z,
-           scroll_click=pgl.K_c,
-           right_click =pgl.K_x,
-           scroll_up   =pgl.K_UP,
-           scroll_down =pgl.K_DOWN):
-    '''マウスクリックをキー入力に変換します。
+
+def switch(
+    event,
+    left_click=pgl.K_z,
+    scroll_click=pgl.K_c,
+    right_click=pgl.K_x,
+    scroll_up=pgl.K_UP,
+    scroll_down=pgl.K_DOWN,
+    *,
+    keyup=False,
+):
+    """マウスクリックをキー入力に変換します。
     デフォルトでは
         左クリック:Z
         スクロールクリック:C
         右クリック:X
         上スクロール:UP
         下スクロール:DOWN
-    かえたいとこだけ指定してください。
-    '''
+    かえたいとこだけ指定してください。None にしたボタンは変換しません。
+    keyup=True にすると MOUSEBUTTONUP も KEYUP に変換します。
+    変換しないイベントはそのまま返します。
+    """
+
+    if event.type == pgl.MOUSEBUTTONUP and not keyup:
+        return event
+    key_type = _KEY_TYPES.get(event.type)
+    if key_type is None:
+        return event
 
     change_table = {
         1: left_click,
@@ -48,23 +60,24 @@ def switch(event,
         4: scroll_up,
         5: scroll_down,
     }
-
-    if event.type != pgl.MOUSEBUTTONDOWN:
+    key = change_table.get(event.button)
+    if key is None:
         return event
 
-    if event.button not in change_table.keys():
-        print('<accept_mouse_click NOTICE> Unknown mouse click:'
-              + str(event.button))
-        return event
-
-    return DummyEvent(pgl.KEYDOWN, change_table[event.button])
+    return pygame.event.Event(
+        key_type,
+        key=key,
+        mod=pgl.KMOD_NONE,
+        unicode="",
+        scancode=0,
+        window=getattr(event, "window", None),
+    )
 
 
 class DummyEvent:
-    '''eventのダミー。
-    オリジナルのeventがreadonlyだったため、ダミーを作ります。
-    ようはtypeの中にMOUSEBUTTONDOWN、keyの中にK_*が入ってりゃいいんだからさ!
-    '''
+    """互換のため残してあるeventのダミー。switch はもう返しません。
+    typeとkeyだけを持ちます。
+    """
 
     def __init__(self, type_, key):
         self.type = type_
